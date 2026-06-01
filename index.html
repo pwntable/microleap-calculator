@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MicroLEAP Portfolio Tracker</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts for Premium Sans Serif -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- PDF.js from CDN for client-side PDF parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+  </script>
+  
+  <!-- Local Custom CSS Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+  
+  <script>
+    // Tailwind Config customization
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#0F172A',
+            secondary: '#1E293B',
+            accent: '#14B8A6',
+            success: '#10B981',
+            warning: '#F59E0B',
+            danger: '#EF4444',
+            surface: '#FFFFFF',
+            background: '#F8FAFC',
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-[#F8FAFC] text-[#0F172A] transition-colors duration-300 dark:bg-[#0F172A] dark:text-[#F8FAFC] min-h-screen">
+  
+  <!-- Mount point for React application -->
+  <div id="root"></div>
+
+  <!-- React & ReactDOM from CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+
+  <!-- PWA Manifest Injection -->
+  <script>
+    const manifest = {
+      "name": "MicroLEAP Portfolio Tracker",
+      "short_name": "MicroLEAP",
+      "start_url": ".",
+      "display": "standalone",
+      "background_color": "#0F172A",
+      "theme_color": "#14B8A6",
+      "description": "Premium monthly investment tracking and predictive simulation engine for MicroLEAP Peer-to-Peer financing platform.",
+      "icons": [
+        {
+          "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='128' fill='%230F172A'/><path d='M150 150h60v212h-60zm100-50h60v312h-60zm100 120h60v142h-60z' fill='%2314B8A6'/></svg>",
+          "sizes": "512x512",
+          "type": "image/svg+xml"
+        }
+      ]
+    };
+    const stringManifest = JSON.stringify(manifest);
+    const blob = new Blob([stringManifest], {type: 'application/json'});
+    const manifestURL = URL.createObjectURL(blob);
+    const link = document.createElement('link');
+    link.rel = 'manifest';
+    link.href = manifestURL;
+    document.head.appendChild(link);
+  </script>
+
+  <!-- Service Worker Code for Offline Support -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      const swCode = `
+        const CACHE_NAME = 'microleap-tracker-v1';
+        const ASSETS = [
+          './',
+          'index.html',
+          'styles.css',
+          'app.jsx',
+          'https://cdn.tailwindcss.com',
+          'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap'
+        ];
+
+        self.addEventListener('install', (e) => {
+          e.waitUntil(
+            caches.open(CACHE_NAME).then((cache) => {
+              return cache.addAll(ASSETS);
+            })
+          );
+        });
+
+        self.addEventListener('fetch', (e) => {
+          e.respondWith(
+            caches.match(e.request).then((cachedResponse) => {
+              return cachedResponse || fetch(e.request);
+            })
+          );
+        });
+      `;
+      const blobSW = new Blob([swCode], {type: 'application/javascript'});
+      const swURL = URL.createObjectURL(blobSW);
+      navigator.serviceWorker.register(swURL).catch(err => console.log('Service Worker registration skipped or failed:', err));
+    }
+  </script>
+
+  <!-- Load the main React UI Source -->
+  <script type="module" src="app.jsx"></script>
+
+</body>
+</html>
