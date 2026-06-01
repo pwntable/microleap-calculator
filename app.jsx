@@ -1081,17 +1081,26 @@ function App() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-slate-100 dark:border-slate-700/50">
             
             {/* Slider 1 */}
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <div className="flex justify-between items-center text-xs">
                 <span className="font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
                   Monthly Savings
                 </span>
-                <strong className="text-slate-900 dark:text-white">RM {monthlyContribution.toLocaleString()}</strong>
+                <div className="flex items-center gap-1 bg-slate-100/50 dark:bg-slate-900/50 border border-slate-200/50 dark:border-slate-800 rounded-xl px-2.5 py-0.5 focus-within:border-teal-500/50 focus-within:ring-1 focus-within:ring-teal-500/30 transition-all">
+                  <span className="text-[10px] font-bold text-slate-400">RM</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={monthlyContribution}
+                    onChange={(e) => setMonthlyContribution(Number(e.target.value))}
+                    className="w-16 font-bold text-xs text-slate-900 dark:text-white bg-transparent border-none p-0 focus:outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
               </div>
               <input
                 type="range"
                 min="0"
-                max="10000"
+                max={Math.max(10000, monthlyContribution)}
                 step="100"
                 value={monthlyContribution}
                 onChange={(e) => setMonthlyContribution(Number(e.target.value))}
@@ -1099,30 +1108,40 @@ function App() {
               />
               <div className="flex justify-between text-[10px] text-slate-400 font-medium">
                 <span>RM 0</span>
-                <span>RM 10,000</span>
+                <span>RM {Math.max(10000, monthlyContribution).toLocaleString()}</span>
               </div>
             </div>
 
             {/* Slider 2 */}
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <div className="flex justify-between items-center text-xs">
                 <span className="font-semibold text-slate-500 dark:text-slate-400">
                   Target Annual Return
                 </span>
-                <strong className="text-slate-900 dark:text-white">{simTargetYield}% p.a.</strong>
+                <div className="flex items-center gap-1 bg-slate-100/50 dark:bg-slate-900/50 border border-slate-200/50 dark:border-slate-800 rounded-xl px-2.5 py-0.5 focus-within:border-teal-500/50 focus-within:ring-1 focus-within:ring-teal-500/30 transition-all">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={simTargetYield}
+                    onChange={(e) => setSimTargetYield(Number(e.target.value))}
+                    className="w-10 text-right font-bold text-xs text-slate-900 dark:text-white bg-transparent border-none p-0 focus:outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <span className="text-[10px] font-bold text-slate-400">%</span>
+                </div>
               </div>
               <input
                 type="range"
                 min="5"
-                max="22"
-                step="0.5"
+                max={Math.max(22, simTargetYield)}
+                step="0.1"
                 value={simTargetYield}
                 onChange={(e) => setSimTargetYield(Number(e.target.value))}
                 className="w-full h-1.5 rounded-lg appearance-none cursor-pointer"
               />
               <div className="flex justify-between text-[10px] text-slate-400 font-medium">
                 <span>5%</span>
-                <span>22%</span>
+                <span>{Math.max(22, simTargetYield)}%</span>
               </div>
             </div>
 
