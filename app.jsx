@@ -1,48 +1,7 @@
 const { useState, useEffect, useMemo, useRef } = React;
 
 // --- SAMPLE/SEED DATA ---
-const SEED_INVESTMENTS = [
-  {
-    id: "inv-1",
-    title: "Kuala Lumpur Retail expansion P2P-109",
-    amount: 8500,
-    rate: 13.5, // % per annum
-    tenure: 12, // months
-    date: "2025-10-15",
-    repaymentType: "monthly", // monthly amortized vs bullet
-    status: "active"
-  },
-  {
-    id: "inv-2",
-    title: "Selangor Agri-Tech Smart Greenhouse Supply",
-    amount: 15000,
-    rate: 11.8,
-    tenure: 18,
-    date: "2025-12-01",
-    repaymentType: "bullet",
-    status: "active"
-  },
-  {
-    id: "inv-3",
-    title: "Johor FMCG Distributing Cash Flow Note",
-    amount: 5000,
-    rate: 14.2,
-    tenure: 6,
-    date: "2026-03-10",
-    repaymentType: "monthly",
-    status: "active"
-  },
-  {
-    id: "inv-4",
-    title: "Penang Medical Device Manufacturing Facility",
-    amount: 3000,
-    rate: 12.0,
-    tenure: 3,
-    date: "2026-01-05",
-    repaymentType: "monthly",
-    status: "matured"
-  }
-];
+const SEED_INVESTMENTS = [];
 
 // --- REUSABLE INLINE SVG ICONS ---
 const Icons = {
@@ -235,7 +194,16 @@ function App() {
   // --- STATE ---
   const [investments, setInvestments] = useState(() => {
     const saved = localStorage.getItem('microleap_investments');
-    return saved ? JSON.parse(saved) : SEED_INVESTMENTS;
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      const filtered = parsed.filter(inv => !["inv-1", "inv-2", "inv-3", "inv-4"].includes(inv.id));
+      if (filtered.length !== parsed.length) {
+        localStorage.setItem('microleap_investments', JSON.stringify(filtered));
+        return filtered;
+      }
+      return parsed;
+    }
+    return SEED_INVESTMENTS;
   });
   
   const [theme, setTheme] = useState(() => {
