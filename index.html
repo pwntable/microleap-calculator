@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MicroLEAP Portfolio Tracker</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="apple-touch-icon" href="/logo.png">
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -64,9 +66,10 @@
       "description": "Premium monthly investment tracking and predictive simulation engine for MicroLEAP Peer-to-Peer financing platform.",
       "icons": [
         {
-          "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='128' fill='%230F172A'/><path d='M150 150h60v212h-60zm100-50h60v312h-60zm100 120h60v142h-60z' fill='%2314B8A6'/></svg>",
-          "sizes": "512x512",
-          "type": "image/svg+xml"
+          "src": new URL('logo.png', window.location.href).href,
+          "sizes": "1024x1024",
+          "type": "image/png",
+          "purpose": "any maskable"
         }
       ]
     };
@@ -89,6 +92,7 @@
           'index.html',
           'styles.css',
           'app.jsx',
+          'logo.png',
           'https://cdn.tailwindcss.com',
           'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap'
         ];
