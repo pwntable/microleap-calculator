@@ -25,7 +25,8 @@ const Icons = {
 };
 
 // --- FINANCIAL ENGINE HELPERS ---
-const getMaturityDate = (dateStr, tenureMonths) => {
+const getMaturityDate = (dateStr, tenureMonths, customMaturityDate) => {
+  if (customMaturityDate) return customMaturityDate;
   const d = new Date(dateStr);
   d.setMonth(d.getMonth() + Number(tenureMonths));
   return d.toISOString().split('T')[0];
@@ -226,7 +227,8 @@ function App() {
     rate: '',
     tenure: '12',
     date: new Date().toISOString().split('T')[0],
-    repaymentType: 'monthly'
+    repaymentType: 'monthly',
+    maturityDate: getMaturityDate(new Date().toISOString().split('T')[0], '12')
   });
   const [formErrors, setFormErrors] = useState({});
   const [editingInvId, setEditingInvId] = useState(null);
@@ -276,6 +278,7 @@ function App() {
     let activeCount = 0;
     let sumRateAmount = 0;
     let totalFees = 0;
+    let latestMaturityDate = null;
 
     investments.forEach(inv => {
       const amt = Number(inv.amount);
@@ -290,6 +293,11 @@ function App() {
         totalExpectedProfit += breakdown.totalInterest;
         activeCount++;
         sumRateAmount += (Number(inv.rate) * amt);
+        
+        const matDateStr = getMaturityDate(inv.date, inv.tenure, inv.maturityDate);
+        if (!latestMaturityDate || matDateStr > latestMaturityDate) {
+          latestMaturityDate = matDateStr;
+        }
       } else {
         earnedProfit += breakdown.totalInterest;
       }
@@ -297,15 +305,26 @@ function App() {
 
     const weightedYield = activePrincipal > 0 ? (sumRateAmount / activePrincipal).toFixed(2) : "0.00";
 
+    const totalPortfolioValue = activePrincipal + totalExpectedProfit + earnedProfit - totalFees;
+    const netReturnPercentage = totalInvested > 0
+      ? (((totalExpectedProfit + earnedProfit - totalFees) / totalInvested) * 100).toFixed(2)
+      : "0.00";
+    const valuationPercentage = totalInvested > 0
+      ? ((totalPortfolioValue / totalInvested) * 100).toFixed(2)
+      : "100.00";
+
     return {
       totalInvested,
       activePrincipal,
       totalExpectedProfit,
       earnedProfit,
       totalFees,
-      totalPortfolioValue: activePrincipal + totalExpectedProfit + earnedProfit - totalFees,
+      totalPortfolioValue,
       activeCount,
-      weightedYield
+      weightedYield,
+      latestMaturityDate: latestMaturityDate || "N/A",
+      netReturnPercentage,
+      valuationPercentage
     };
   }, [investments]);
 
@@ -315,7 +334,7 @@ function App() {
     investments.forEach(inv => {
       if (inv.status !== 'active') return;
       
-      const matDateStr = getMaturityDate(inv.date, inv.tenure);
+      const matDateStr = getMaturityDate(inv.date, inv.tenure, inv.maturityDate);
       const matDate = new Date(matDateStr);
       const mName = matDate.toLocaleString('default', { month: 'long' });
       const yName = matDate.getFullYear();
@@ -435,7 +454,8 @@ function App() {
       rate: '',
       tenure: '12',
       date: new Date().toISOString().split('T')[0],
-      repaymentType: 'monthly'
+      repaymentType: 'monthly',
+      maturityDate: getMaturityDate(new Date().toISOString().split('T')[0], '12')
     });
     setFormErrors({});
     setPdfError(null);
@@ -535,13 +555,40 @@ function App() {
         }
       }
 
+      // Parse repayment schedule dates to find the actual end of contract date
+      let parsedMaturityDate = '';
+      const dateRegex = /\b(\d{2})\/(\d{2})\/(\d{4})\b/g;
+      let dateMatchItem;
+      let maxDate = null;
+      while ((dateMatchItem = dateRegex.exec(extractedText)) !== null) {
+        const [fullMatch, day, month, year] = dateMatchItem;
+        const matchIndex = dateMatchItem.index;
+        
+        const postText = extractedText.substring(matchIndex + fullMatch.length, matchIndex + fullMatch.length + 20);
+        const isFooterTime = /^\s*,\s*\d{1,2}:\d{2}/.test(postText);
+        
+        const preText = extractedText.substring(Math.max(0, matchIndex - 100), matchIndex);
+        const isFooterLink = preText.includes("microleapasia.com") || preText.includes("dashboard.microleapasia.com");
+        
+        if (!isFooterTime && !isFooterLink) {
+          const currentD = new Date(`${year}-${month}-${day}`);
+          if (!isNaN(currentD.getTime())) {
+            if (!maxDate || currentD > maxDate) {
+              maxDate = currentD;
+              parsedMaturityDate = `${year}-${month}-${day}`;
+            }
+          }
+        }
+      }
+
       setNewInv({
         title: title || file.name.replace(/\.[^/.]+$/, ""),
         amount: amount,
         rate: rate,
         tenure: tenure,
         date: formattedDate,
-        repaymentType: repaymentType
+        repaymentType: repaymentType,
+        maturityDate: parsedMaturityDate || getMaturityDate(formattedDate, tenure)
       });
 
       triggerToast("📄 MicroLEAP PDF parsed successfully! Form auto-filled.");
@@ -562,7 +609,8 @@ function App() {
       rate: inv.rate.toString(),
       tenure: inv.tenure.toString(),
       date: inv.date,
-      repaymentType: inv.repaymentType
+      repaymentType: inv.repaymentType,
+      maturityDate: inv.maturityDate || getMaturityDate(inv.date, inv.tenure)
     });
     setIsAddModalOpen(true);
   };
@@ -583,7 +631,8 @@ function App() {
             rate: parseFloat(newInv.rate),
             tenure: parseInt(newInv.tenure, 10),
             date: newInv.date,
-            repaymentType: newInv.repaymentType
+            repaymentType: newInv.repaymentType,
+            maturityDate: newInv.maturityDate || getMaturityDate(newInv.date, newInv.tenure)
           };
         }
         return item;
@@ -599,6 +648,7 @@ function App() {
         tenure: parseInt(newInv.tenure, 10),
         date: newInv.date,
         repaymentType: newInv.repaymentType,
+        maturityDate: newInv.maturityDate || getMaturityDate(newInv.date, newInv.tenure),
         status: 'active'
       };
 
@@ -878,7 +928,14 @@ function App() {
           </div>
           <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-widest">Total Valuation (Net)</p>
           <h3 className="text-3xl font-extrabold text-slate-900 dark:text-white mt-1">RM {portfolioMetrics.totalPortfolioValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">Principal + profit - 1% fee (RM {portfolioMetrics.totalFees.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</p>
+          <div className="text-xs text-slate-400 dark:text-slate-500 mt-2 flex flex-col gap-0.5">
+            <p>Principal + profit - 1% fee (RM {portfolioMetrics.totalFees.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</p>
+            {portfolioMetrics.totalInvested > 0 && (
+              <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                +{portfolioMetrics.netReturnPercentage}% Net Return from Capital
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Weighted Average Yield */}
@@ -893,7 +950,14 @@ function App() {
           </div>
           <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-widest">Weighted Yield Rate</p>
           <h3 className="text-3xl font-extrabold text-indigo-500 mt-1">{portfolioMetrics.weightedYield}% <span className="text-xs text-slate-400 dark:text-slate-500">p.a.</span></h3>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">Diversified note yield average</p>
+          <div className="text-xs text-slate-400 dark:text-slate-500 mt-2 flex flex-col gap-0.5">
+            <p>Diversified note yield average</p>
+            {portfolioMetrics.latestMaturityDate !== 'N/A' && (
+              <p className="text-[10px] font-bold text-teal-600 dark:text-teal-400">
+                Latest Maturity: {portfolioMetrics.latestMaturityDate}
+              </p>
+            )}
+          </div>
         </div>
 
       </div>
@@ -1175,7 +1239,9 @@ function App() {
           <div className="flex items-center justify-between mb-6 pb-2 border-b border-slate-100 dark:border-slate-700/50">
             <div>
               <h2 className="text-md font-extrabold text-slate-900 dark:text-white">Maturity Timeline</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Cash-out and reinvestment schedule</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Cash-out schedule {portfolioMetrics.latestMaturityDate !== 'N/A' && `• Final End: ${portfolioMetrics.latestMaturityDate}`}
+              </p>
             </div>
             <span className="p-2.5 bg-indigo-50 dark:bg-slate-900 text-indigo-500 rounded-xl">
               <Icons.Calendar />
@@ -1297,7 +1363,7 @@ function App() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredInvestments.map(inv => {
               const breakdown = calculateYieldBreakdown(inv);
-              const matDate = getMaturityDate(inv.date, inv.tenure);
+              const matDate = getMaturityDate(inv.date, inv.tenure, inv.maturityDate);
               
               // Calculate tenure progress bar percentage
               const start = new Date(inv.date).getTime();
@@ -1595,7 +1661,14 @@ function App() {
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Tenure (Months)</label>
                   <select
                     value={newInv.tenure}
-                    onChange={(e) => setNewInv({ ...newInv, tenure: e.target.value })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setNewInv({
+                        ...newInv,
+                        tenure: val,
+                        maturityDate: getMaturityDate(newInv.date, val)
+                      });
+                    }}
                     className="w-full p-3.5 text-xs rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50"
                   >
                     {[3, 6, 9, 12, 15, 18, 24, 36].map(m => (
@@ -1610,7 +1683,14 @@ function App() {
                   <input
                     type="date"
                     value={newInv.date}
-                    onChange={(e) => setNewInv({ ...newInv, date: e.target.value })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setNewInv({
+                        ...newInv,
+                        date: val,
+                        maturityDate: getMaturityDate(val, newInv.tenure)
+                      });
+                    }}
                     className={`w-full p-3.5 text-xs rounded-2xl border bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50 ${
                       formErrors.date ? 'border-red-500' : 'border-slate-200 dark:border-slate-700/80'
                     }`}
@@ -1618,6 +1698,20 @@ function App() {
                   {formErrors.date && <p className="text-[10px] font-medium text-red-500">{formErrors.date}</p>}
                 </div>
 
+              </div>
+
+              {/* End of Contract Date (Maturity) */}
+              <div className="space-y-1">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">End of Contract Date (Maturity)</label>
+                  <span className="text-[10px] text-teal-600 dark:text-teal-400 font-medium">Auto-predicted or parsed</span>
+                </div>
+                <input
+                  type="date"
+                  value={newInv.maturityDate || ''}
+                  onChange={(e) => setNewInv({ ...newInv, maturityDate: e.target.value })}
+                  className="w-full p-3.5 text-xs rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50"
+                />
               </div>
 
               {/* Repayment Type selection */}
